@@ -1,14 +1,13 @@
 
 import logging
+
 from django.shortcuts import render
-
-logger = logging.getLogger(__name__)
-
 from django.utils import timezone
 from django.db import transaction
 from django.db.models import F
 
-from .gemini_service import recognize_with_gemini
+from .gemini_service import ALLOWED_CLASSES, recognize_with_gemini
+from .local_model_service import recognize_with_local_model
 from .models import (
     Plant,
     PlantComparison,
@@ -16,27 +15,60 @@ from .models import (
     DailyRecognitionQuota,
 )
 
+logger = logging.getLogger(__name__)
+
+CONFIDENCE_THRESHOLD = 0.50
+MAX_IMAGE_SIZE = 10 * 1024 * 1024
+
+ALLOWED_MIME_TYPES = {
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+}
+
 
 def use_daily_quota():
-    """Dành một lượt nhận diện trong hạn mức chung mỗi ngày."""
+    """Dành một lượt trong hạn mức gọi Gemini mỗi ngày."""
     today = timezone.localdate()
 
     with transaction.atomic():
-        quota, _ = DailyRecognitionQuota.objects.get_or_create(
+        DailyRecognitionQuota.objects.get_or_create(
             day=today,
             defaults={"used": 0},
         )
 
         updated = (
             DailyRecognitionQuota.objects
-            .filter(day=today, used__lt=DailyRecognitionQuota.LIMIT)
+            .filter(
+                day=today,
+                used__lt=DailyRecognitionQuota.LIMIT,
+            )
             .update(used=F("used") + 1)
         )
 
-        if updated == 0:
-            return False
+        return updated > 0
 
-    return True
+
+def attach_plant_information(ai_name):
+    """Tìm thông tin cây trong cơ sở dữ liệu."""
+    plant = Plant.objects.filter(
+        name__iexact=ai_name.strip()
+    ).first()
+
+    if plant is None:
+        return None, [], []
+
+    comparisons = list(
+        PlantComparison.objects
+        .filter(plant=plant)
+        .select_related("compared_plant")
+    )
+
+    quiz_questions = list(
+        QuizQuestion.objects.filter(plant=plant)
+    )
+
+    return plant, comparisons, quiz_questions
 
 
 def home(request):
@@ -53,79 +85,156 @@ def home(request):
         if not image_file:
             error = "Vui lòng chọn một hình ảnh."
 
-        elif image_file.size > 10 * 1024 * 1024:
+        elif image_file.size > MAX_IMAGE_SIZE:
             error = "Ảnh quá lớn. Vui lòng chọn ảnh không quá 10 MB."
 
-        elif image_file.content_type not in {
-            "image/jpeg",
-            "image/png",
-            "image/webp",
-        }:
+        elif image_file.content_type not in ALLOWED_MIME_TYPES:
             error = "Vui lòng sử dụng ảnh JPG, PNG hoặc WEBP."
 
-        elif not use_daily_quota():
-            error = (
-                "Hệ thống đã đạt giới hạn 1.500 lượt nhận diện "
-                "trong hôm nay. Vui lòng thử lại vào ngày mai."
-            )
-
         else:
-            try:
-                image_bytes = image_file.read()
+            image_bytes = image_file.read()
+            class_key = None
+            confidence = None
+            local_name = None
 
-                ai_name, ai_reason = recognize_with_gemini(
-                    image_bytes,
-                    image_file.content_type,
+            # Bước 1: Chạy mô hình đã huấn luyện trước.
+            try:
+                class_key, confidence = recognize_with_local_model(
+                    image_bytes
+                )
+                local_name = ALLOWED_CLASSES.get(class_key)
+
+                if local_name is None:
+                    raise ValueError(
+                        f"Lớp cây không được hỗ trợ: {class_key}"
+                    )
+
+            except Exception:
+                logger.exception("Lỗi mô hình nhận diện cục bộ")
+                error = (
+                    "Không thể chạy mô hình nhận diện cục bộ. "
+                    "Hãy kiểm tra file mô hình và thử lại."
                 )
 
-                if not ai_name:
-                    error = (
-                        "Chưa thể xác định cây thuộc danh sách hỗ trợ. "
-                        + (ai_reason or "Vui lòng thử ảnh rõ hơn.")
+            # Bước 2: Nếu confidence đủ cao, dùng kết quả cục bộ.
+            if local_name is not None and confidence is not None:
+                if confidence >= CONFIDENCE_THRESHOLD:
+                    ai_name = local_name
+                    ai_reason = (
+                        "Nhận diện bằng EfficientNet-B0 đã huấn luyện. "
+                        f"Confidence: {confidence:.1%}. "
+                        "Đây là điểm tin cậy của mô hình, "
+                        "không bảo đảm kết quả luôn chính xác."
                     )
+
                 else:
+                    # Bước 3: Confidence thấp thì thử Gemini.
                     try:
-                        plant = Plant.objects.filter(name__iexact=ai_name.strip()).first()
+                        quota_available = use_daily_quota()
+                    except Exception:
+                        logger.exception(
+                            "Không kiểm tra được hạn mức Gemini"
+                        )
+                        quota_available = False
 
-                        comparisons = (
-                            PlantComparison.objects
-                            .filter(plant=plant)
-                            .select_related("compared_plant")
+                    if not quota_available:
+                        ai_name = local_name
+                        ai_reason = (
+                            "Gemini hiện không khả dụng hoặc hạn mức "
+                            "đã hết. Hệ thống dùng dự đoán của "
+                            "EfficientNet-B0 với confidence "
+                            f"{confidence:.1%}. Kết quả chưa được "
+                            "xác minh; vui lòng kiểm tra lại."
                         )
 
-                        quiz_questions = QuizQuestion.objects.filter(
-                            plant=plant
-                        )
+                    else:
+                        try:
+                            gemini_name, gemini_reason = (
+                                recognize_with_gemini(
+                                    image_bytes,
+                                    image_file.content_type,
+                                )
+                            )
 
-                    except Plant.DoesNotExist:
+                            if gemini_name:
+                                ai_name = gemini_name
+                                ai_reason = (
+                                    "Gemini được dùng để xác minh vì "
+                                    "confidence của mô hình cục bộ "
+                                    f"là {confidence:.1%}. "
+                                    f"{gemini_reason or ''}"
+                                )
+                            else:
+                                ai_name = local_name
+                                ai_reason = (
+                                    "Gemini chưa xác định được cây. "
+                                    f"EfficientNet-B0 dự đoán {local_name} "
+                                    f"với confidence {confidence:.1%}. "
+                                    f"{gemini_reason or ''} "
+                                    "Kết quả chưa được xác minh."
+                                )
+
+                        except Exception as exc:
+                            logger.exception(
+                                "Gemini thất bại; dùng kết quả cục bộ"
+                            )
+                            message = str(exc).upper()
+
+                            if (
+                                "429" in message
+                                or "RESOURCE_EXHAUSTED" in message
+                                or "QUOTA" in message
+                            ):
+                                fallback_note = (
+                                    "Gemini đã chạm giới hạn yêu cầu "
+                                    "hoặc hạn mức API."
+                                )
+                            elif (
+                                "503" in message
+                                or "UNAVAILABLE" in message
+                            ):
+                                fallback_note = (
+                                    "Gemini đang tạm thời không khả dụng."
+                                )
+                            else:
+                                fallback_note = (
+                                    "Không thể xác minh bằng Gemini."
+                                )
+
+                            ai_name = local_name
+                            ai_reason = (
+                                f"{fallback_note} "
+                                "Hệ thống đã chuyển về mô hình "
+                                "EfficientNet-B0 đã huấn luyện. "
+                                f"Confidence: {confidence:.1%}. "
+                                "Kết quả chưa được xác minh; "
+                                "vui lòng kiểm tra lại."
+                            )
+
+                # Bước 4: Tải thông tin cây trong cơ sở dữ liệu.
+                if ai_name:
+                    try:
+                        (
+                            plant,
+                            comparisons,
+                            quiz_questions,
+                        ) = attach_plant_information(ai_name)
+
+                        if plant is None:
+                            ai_reason = (
+                                f"{ai_reason or ''} "
+                                "Cây này chưa có bản ghi khớp trong "
+                                "cơ sở dữ liệu Flora AI."
+                            )
+
+                    except Exception:
+                        logger.exception(
+                            "Lỗi truy xuất thông tin cây"
+                        )
                         error = (
-                            f"Gemini nhận diện được {ai_name}, nhưng "
-                            "cây này chưa có trong cơ sở dữ liệu."
+                            "Đã nhận diện được tên cây nhưng chưa thể "
+                            "tải thông tin chi tiết. Vui lòng thử lại."
                         )
-
-            except ValueError as exc:
-                error = str(exc)
-
-            
-            except Exception as exc:
-                logger.exception("Lỗi khi nhận diện ảnh bằng Gemini")
-                message = str(exc).upper()
-
-                if "429" in message or "RESOURCE_EXHAUSTED" in message:
-                    error = (
-                        "Dịch vụ Gemini đang giới hạn yêu cầu. "
-                        "Vui lòng thử lại sau."
-                    )
-                elif "503" in message or "UNAVAILABLE" in message:
-                    error = (
-                        "Dịch vụ AI đang bận. Vui lòng thử lại sau ít phút."
-                    )
-                else:
-                    error = (
-                        "Đã xảy ra lỗi khi nhận diện ảnh. "
-                        "Vui lòng kiểm tra cấu hình Gemini và thử lại."
-                    )
-
 
     return render(
         request,

@@ -102,9 +102,10 @@ def home(request):
             except ValueError as exc:
                 error = str(exc)
 
+            
             except Exception as exc:
-    logger.exception("Lỗi khi nhận diện ảnh bằng Gemini")
-    message = str(exc).upper()
+                logger.exception("Lỗi khi nhận diện ảnh bằng Gemini")
+                message = str(exc).upper()
 
                 if "429" in message or "RESOURCE_EXHAUSTED" in message:
                     error = (
@@ -120,6 +121,7 @@ def home(request):
                         "Đã xảy ra lỗi khi nhận diện ảnh. "
                         "Vui lòng kiểm tra cấu hình Gemini và thử lại."
                     )
+
 
     return render(
         request,

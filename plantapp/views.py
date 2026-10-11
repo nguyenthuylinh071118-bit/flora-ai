@@ -50,9 +50,30 @@ def use_daily_quota():
 
 
 def attach_plant_information(ai_name):
-    """Tìm thông tin cây trong cơ sở dữ liệu."""
+    """Tìm thông tin cây trong cơ sở dữ liệu Flora AI."""
+    if not ai_name:
+        return None, [], []
+
+    aliases = {
+        "bong_trang": "Hoa bông trang",
+        "cay_buoi": "Cây bưởi",
+        "cay_chuoi": "Cây chuối",
+        "cay_phuong": "Cây phượng",
+        "hoa_hong": "Hoa hồng",
+        "hoa_layon": "Hoa layon",
+        "hoa_sen": "Hoa sen",
+        "lan_mokara": "Lan Mokara",
+        "muong_trau": "Cây muồng trâu",
+        "vong_mong_ga": "Vông mồng gà",
+    }
+
+    search_name = aliases.get(
+        ai_name.strip().lower(),
+        ai_name.strip(),
+    )
+
     plant = Plant.objects.filter(
-        name__iexact=ai_name.strip()
+        name__iexact=search_name
     ).first()
 
     if plant is None:
@@ -69,7 +90,6 @@ def attach_plant_information(ai_name):
     )
 
     return plant, comparisons, quiz_questions
-
 
 def home(request):
     plant = None

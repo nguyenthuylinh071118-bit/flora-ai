@@ -544,6 +544,30 @@
     </form>
 ```
 
+{% if ai_name and not plant %}
+    <section class="panel" id="ai-fallback-result">
+        <div class="result-heading">
+            <div class="symbol">🌿</div>
+            <div>
+                <h2>{{ ai_name }}</h2>
+                <p>Kết quả từ mô hình AI cục bộ</p>
+            </div>
+        </div>
+
+        {% if ai_reason %}
+            <div class="text-block">
+                {{ ai_reason }}
+            </div>
+        {% endif %}
+
+        <p>
+            Lưu ý: Kết quả dự đoán chưa được xác minh.
+            Vui lòng đối chiếu với đặc điểm thực tế của cây.
+        </p>
+    </section>
+{% endif %}
+
+
     </section>
 
     {% if plant %}

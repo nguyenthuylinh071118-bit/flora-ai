@@ -1,4 +1,4 @@
-
+import logging
 from django.shortcuts import render
 from django.utils import timezone
 from django.db import transaction
@@ -103,7 +103,8 @@ def home(request):
                 error = str(exc)
 
             except Exception as exc:
-                message = str(exc).upper()
+    logger.exception("Lỗi khi nhận diện ảnh bằng Gemini")
+    message = str(exc).upper()
 
                 if "429" in message or "RESOURCE_EXHAUSTED" in message:
                     error = (

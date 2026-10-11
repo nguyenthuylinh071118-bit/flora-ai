@@ -85,7 +85,7 @@ def home(request):
                     )
                 else:
                     try:
-                        plant = Plant.objects.get(name=ai_name)
+                        plant = Plant.objects.filter(name__iexact=ai_name.strip()).first()
 
                         comparisons = (
                             PlantComparison.objects

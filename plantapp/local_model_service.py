@@ -57,7 +57,6 @@ def load_plant_model():
             url=model_url,
             output=str(model_path),
             quiet=False,
-            fuzzy=True,
         )
 
         if (

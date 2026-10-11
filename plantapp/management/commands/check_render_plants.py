@@ -1,9 +1,9 @@
-from django.core.management.base import BaseCommand
+﻿from django.core.management.base import BaseCommand
 from plantapp.models import Plant
 
 
 class Command(BaseCommand):
-    help = "Kiểm tra danh sách cây trong cơ sở dữ liệu"
+    help = "Kiem tra danh sach cay trong co so du lieu"
 
     def handle(self, *args, **options):
         plants = Plant.objects.order_by("name").values_list(

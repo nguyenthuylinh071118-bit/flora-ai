@@ -1,0 +1,38 @@
+﻿.env
+.env.*
+!.env.example
+venv/
+.venv/
+__pycache__/
+*.py[cod]
+db.sqlite3
+media/
+staticfiles/
+
+# AI models
+*.pth
+*.pt
+*.onnx
+
+# Training datasets and backups
+dataset/
+anh_cho_loc/
+anh_moi_sau_loc/
+anh_sai/
+downloaded_images/
+independent_test/
+bong_trang_anh_cu/
+duplicate_backup/
+backup_test_train_*/
+backup_test_val_*/
+backup_val_test_*/
+
+# Generated reports
+bao_cao_*.txt
+anh_trung_*.csv
+anh_trung_*.txt
+wrong_predictions.csv
+test_*.jpg
+test_*.png
+
+*.before_deploy_backup

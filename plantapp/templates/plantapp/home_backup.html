@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Nhận diện thực vật</title>
+</head>
+
+<body>
+
+<h1>🌱 Hệ thống nhận diện thực vật</h1>
+
+<form method="POST" enctype="multipart/form-data">
+
+    {% csrf_token %}
+
+    <input
+        type="file"
+        name="image"
+        accept="image/*"
+        required
+    >
+
+    <button type="submit">
+        Nhận diện cây
+    </button>
+
+</form>
+
+
+{% if error %}
+
+    <hr>
+
+    <h3>Lỗi:</h3>
+
+    <p>{{ error }}</p>
+
+{% endif %}
+
+
+{% if plant %}
+
+    <hr>
+
+    <h2>🌿 {{ plant.name }}</h2>
+
+    <h3>🔎 Vì sao đây là {{ plant.name }}?</h3>
+
+<p>
+    {{ plant.identification_clues|linebreaksbr }}
+</p>
+
+    <p>
+        <strong>Tên khoa học:</strong>
+        {{ plant.scientific_name }}
+    </p>
+
+
+    <h3>🔬 Phân loại</h3>
+
+    <p><strong>Ngành:</strong> {{ plant.phylum }}</p>
+    <p><strong>Lớp:</strong> {{ plant.class_name }}</p>
+    <p><strong>Bộ:</strong> {{ plant.order }}</p>
+    <p><strong>Họ:</strong> {{ plant.family }}</p>
+    <p><strong>Chi:</strong> {{ plant.genus }}</p>
+    <p><strong>Loài:</strong> {{ plant.species }}</p>
+
+
+    <h3>🌿 Đặc điểm hình thái</h3>
+
+    <p>
+        <strong>Mô tả:</strong>
+        {{ plant.description }}
+    </p>
+
+    <p>
+        <strong>Đặc điểm:</strong>
+        {{ plant.characteristics }}
+    </p>
+
+    <p>
+        <strong>Thân:</strong>
+        {{ plant.stem }}
+    </p>
+
+    <p>
+        <strong>Rễ:</strong>
+        {{ plant.root }}
+    </p>
+
+    <p>
+        <strong>Lá:</strong>
+        {{ plant.leaf }}
+    </p>
+
+    <p>
+        <strong>Hoa:</strong>
+        {{ plant.flower }}
+    </p>
+
+    <p>
+        <strong>Quả:</strong>
+        {{ plant.fruit }}
+    </p>
+
+    <p>
+        <strong>Hạt:</strong>
+        {{ plant.seed }}
+    </p>
+
+    <p>
+        <strong>Công thức hoa:</strong>
+        {{ plant.flower_formula }}
+    </p>
+
+
+    <h3>🌍 Sinh thái</h3>
+
+    <p>
+        <strong>Môi trường sống:</strong>
+        {{ plant.habitat }}
+    </p>
+
+    <p>
+        <strong>Phân bố:</strong>
+        {{ plant.distribution }}
+    </p>
+
+    <p>
+        <strong>Vai trò:</strong>
+        {{ plant.role }}
+    </p>
+
+
+    <h3>💡 Công dụng</h3>
+
+    <p>{{ plant.uses }}</p>
+
+
+    <h3>🌱 Loài dễ nhầm</h3>
+
+    {% if comparisons %}
+
+        {% for comparison in comparisons %}
+
+            <p>
+                <strong>
+                    {{ comparison.plant.name }}
+                    ↔
+                    {{ comparison.compared_plant.name }}
+                </strong>
+            </p>
+
+            <p>
+                {{ comparison.differences }}
+            </p>
+
+        {% endfor %}
+
+    {% else %}
+
+        <p>
+            Chưa có dữ liệu loài dễ nhầm.
+        </p>
+
+    {% endif %}
+
+
+    <h3>🧠 Kiểm tra bạn</h3>
+
+    {% if quiz_questions %}
+
+        {% for quiz in quiz_questions %}
+
+            <div>
+
+                <p>
+                    <strong>
+                        {{ forloop.counter }}.
+                        {{ quiz.question }}
+                    </strong>
+                </p>
+
+
+                <label>
+                    <input
+                        type="radio"
+                        name="quiz_{{ quiz.id }}"
+                        value="A"
+                    >
+                    A. {{ quiz.option_a }}
+                </label>
+
+                <br>
+
+
+                <label>
+                    <input
+                        type="radio"
+                        name="quiz_{{ quiz.id }}"
+                        value="B"
+                    >
+                    B. {{ quiz.option_b }}
+                </label>
+
+                <br>
+
+
+                <label>
+                    <input
+                        type="radio"
+                        name="quiz_{{ quiz.id }}"
+                        value="C"
+                    >
+                    C. {{ quiz.option_c }}
+                </label>
+
+                <br>
+
+
+                <label>
+                    <input
+                        type="radio"
+                        name="quiz_{{ quiz.id }}"
+                        value="D"
+                    >
+                    D. {{ quiz.option_d }}
+                </label>
+
+                <br><br>
+
+
+                <button
+                    type="button"
+                    onclick="checkAnswer(
+                        '{{ quiz.id }}',
+                        '{{ quiz.correct_answer }}',
+                        '{{ quiz.explanation|escapejs }}'
+                    )"
+                >
+                    Kiểm tra đáp án
+                </button>
+
+
+                <p id="result_{{ quiz.id }}"></p>
+
+            </div>
+
+            <hr>
+
+        {% endfor %}
+
+    {% else %}
+
+        <p>
+            Chưa có câu hỏi kiểm tra.
+        </p>
+
+    {% endif %}
+
+
+{% endif %}
+
+
+<script>
+
+function checkAnswer(
+    quizId,
+    correctAnswer,
+    explanation
+) {
+
+    const selected = document.querySelector(
+        'input[name="quiz_' + quizId + '"]:checked'
+    );
+
+    const result = document.getElementById(
+        'result_' + quizId
+    );
+
+
+    if (!selected) {
+
+        result.textContent =
+            "⚠️ Vui lòng chọn một đáp án.";
+
+        return;
+    }
+
+
+    if (selected.value === correctAnswer) {
+
+        result.textContent =
+            "✅ Chính xác! " + explanation;
+
+    } else {
+
+        result.textContent =
+            "❌ Chưa đúng. " + explanation;
+
+    }
+
+}
+
+</script>
+
+</body>
+
+</html>

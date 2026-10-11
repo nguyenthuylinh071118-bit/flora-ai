@@ -1,0 +1,827 @@
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flora AI | Nhận diện thực vật</title>
+    <style>
+        :root {
+            --green: #236b45;
+            --green-dark: #164b32;
+            --green-light: #eaf5ec;
+            --mint: #f5faf5;
+            --text: #24352a;
+            --muted: #718075;
+            --white: #ffffff;
+            --border: #dce9de;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: "Segoe UI", Arial, sans-serif;
+            color: var(--text);
+            background: var(--mint);
+            line-height: 1.65;
+        }
+
+        header {
+            background: rgba(255,255,255,.96);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .nav {
+            max-width: 1120px;
+            margin: auto;
+            padding: 18px 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 11px;
+            color: var(--green-dark);
+            font-size: 22px;
+            font-weight: 800;
+        }
+
+        .brand-icon {
+            width: 42px;
+            height: 42px;
+            display: grid;
+            place-items: center;
+            background: var(--green-light);
+            border-radius: 14px;
+            font-size: 24px;
+        }
+
+        .nav-note {
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        main {
+            max-width: 1120px;
+            margin: auto;
+            padding: 44px 24px 70px;
+        }
+
+        .hero {
+            display: grid;
+            grid-template-columns: 1.1fr .9fr;
+            gap: 36px;
+            align-items: center;
+            margin-bottom: 36px;
+        }
+
+        .eyebrow {
+            display: inline-block;
+            padding: 6px 12px;
+            background: #e1f0e4;
+            color: var(--green);
+            border-radius: 30px;
+            font-size: 13px;
+            font-weight: 700;
+        }
+
+        h1 {
+            margin: 16px 0;
+            color: var(--green-dark);
+            font-size: clamp(34px, 5vw, 52px);
+            line-height: 1.15;
+            letter-spacing: -1.2px;
+        }
+
+        .hero p {
+            color: var(--muted);
+            font-size: 17px;
+            max-width: 560px;
+        }
+
+        .hero-art {
+            min-height: 230px;
+            display: grid;
+            place-items: center;
+            background: linear-gradient(135deg, #e4f3e6, #f5f9df);
+            border-radius: 28px;
+            border: 1px solid #d8e9d5;
+            overflow: hidden;
+            position: relative;
+        }
+
+        .hero-art .leaf {
+            font-size: 112px;
+            filter: drop-shadow(0 12px 10px #9cbea0);
+        }
+
+        .floating {
+            position: absolute;
+            padding: 9px 13px;
+            background: white;
+            border: 1px solid var(--border);
+            border-radius: 14px;
+            box-shadow: 0 8px 24px #24573812;
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        .float-one { top: 22px; left: 18px; }
+        .float-two { bottom: 22px; right: 18px; }
+
+        .panel {
+            background: var(--white);
+            border: 1px solid var(--border);
+            border-radius: 24px;
+            padding: 28px;
+            box-shadow: 0 12px 38px #1b55300b;
+            margin-bottom: 24px;
+        }
+
+        .section-title {
+            margin: 0 0 5px;
+            color: var(--green-dark);
+            font-size: 24px;
+        }
+
+        .section-desc {
+            margin: 0 0 22px;
+            color: var(--muted);
+        }
+
+        .upload-area {
+            border: 2px dashed #a9cdb0;
+            background: #f8fcf8;
+            border-radius: 20px;
+            padding: 28px 18px;
+            text-align: center;
+            transition: .2s;
+        }
+
+        .upload-area.dragover {
+            background: #eaf5ec;
+            border-color: var(--green);
+        }
+
+        .upload-icon {
+            font-size: 42px;
+            margin-bottom: 4px;
+        }
+
+        .upload-area h3 {
+            margin: 4px 0;
+            font-size: 18px;
+        }
+
+        .upload-area p {
+            color: var(--muted);
+            margin: 5px 0 16px;
+            font-size: 14px;
+        }
+
+        .file-label {
+            display: inline-block;
+            padding: 10px 18px;
+            background: var(--green-light);
+            color: var(--green-dark);
+            border-radius: 10px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .file-label:hover { background: #d8eddc; }
+
+        input[type="file"] {
+            position: absolute;
+            width: 1px;
+            height: 1px;
+            opacity: 0;
+            overflow: hidden;
+        }
+
+        #preview-box {
+            display: none;
+            margin: 20px auto 0;
+            max-width: 420px;
+        }
+
+        #preview {
+            display: block;
+            max-width: 100%;
+            max-height: 340px;
+            object-fit: contain;
+            margin: auto;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+        }
+
+        #file-name {
+            color: var(--muted);
+            font-size: 13px;
+            margin-top: 8px;
+            overflow-wrap: anywhere;
+        }
+
+        .primary-btn {
+            width: 100%;
+            margin-top: 20px;
+            padding: 14px 20px;
+            border: 0;
+            border-radius: 12px;
+            color: white;
+            background: var(--green);
+            font-size: 16px;
+            font-weight: 750;
+            cursor: pointer;
+            transition: .2s;
+        }
+
+        .primary-btn:hover {
+            background: var(--green-dark);
+            transform: translateY(-1px);
+        }
+
+        .primary-btn:disabled {
+            opacity: .65;
+            cursor: wait;
+            transform: none;
+        }
+
+        .error {
+            background: #fff1ef;
+            color: #9e3327;
+            border: 1px solid #f2cbc5;
+            border-radius: 12px;
+            padding: 14px 16px;
+            margin-bottom: 22px;
+        }
+
+        .result-heading {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 18px;
+        }
+
+        .result-heading .symbol {
+            width: 48px;
+            height: 48px;
+            display: grid;
+            place-items: center;
+            background: var(--green-light);
+            border-radius: 15px;
+            font-size: 26px;
+        }
+
+        .result-heading h2 {
+            margin: 0;
+            color: var(--green-dark);
+            font-size: 28px;
+        }
+
+        .result-heading p {
+            margin: 2px 0 0;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .subheading {
+            margin: 26px 0 10px;
+            font-size: 19px;
+            color: var(--green-dark);
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+        }
+
+        .info-item {
+            padding: 14px 16px;
+            background: #f7faf7;
+            border: 1px solid #e7efe7;
+            border-radius: 13px;
+            overflow-wrap: anywhere;
+        }
+
+        .info-item strong {
+            display: block;
+            color: var(--green);
+            font-size: 13px;
+            margin-bottom: 3px;
+        }
+
+        .info-item span { white-space: pre-wrap; }
+
+        .text-block {
+            padding: 15px 17px;
+            background: #f7faf7;
+            border-radius: 13px;
+            margin: 10px 0;
+            overflow-wrap: anywhere;
+        }
+
+        .text-block strong { color: var(--green-dark); }
+
+        .comparison-card, .quiz-card {
+            padding: 18px;
+            background: #f8fbf8;
+            border: 1px solid var(--border);
+            border-radius: 15px;
+            margin-top: 14px;
+        }
+
+        .quiz-card label {
+            display: block;
+            padding: 7px 0;
+            cursor: pointer;
+        }
+
+        .quiz-card input { accent-color: var(--green); }
+
+        .secondary-btn {
+            margin-top: 10px;
+            padding: 9px 15px;
+            border: 1px solid #bad5bf;
+            background: white;
+            color: var(--green-dark);
+            border-radius: 9px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .quiz-result {
+            color: var(--green-dark);
+            font-weight: 600;
+        }
+
+        footer {
+            padding: 24px;
+            text-align: center;
+            color: var(--muted);
+            font-size: 13px;
+            border-top: 1px solid var(--border);
+            background: white;
+        }
+
+        @media (max-width: 760px) {
+            main { padding: 28px 15px 45px; }
+            .nav { padding: 14px 16px; }
+            .nav-note { display: none; }
+            .hero { grid-template-columns: 1fr; gap: 20px; }
+            .hero-art { min-height: 170px; }
+            .hero-art .leaf { font-size: 80px; }
+            .panel { padding: 20px 16px; }
+            .info-grid { grid-template-columns: 1fr; }
+        }
+
+.upload-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+    margin-top: 22px;
+}
+
+.upload-option {
+    min-height: 145px;
+    padding: 20px 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    border: 1px solid #cfe3d2;
+    border-radius: 16px;
+    background: #fff;
+    color: #236b45;
+    cursor: pointer;
+    font: inherit;
+    transition: .2s;
+}
+
+.upload-option:hover {
+    border-color: #236b45;
+    background: #f0f8f1;
+    transform: translateY(-2px);
+}
+
+.option-icon {
+    font-size: 34px;
+}
+
+.upload-option strong {
+    font-size: 15px;
+}
+
+.upload-option small {
+    color: #718075;
+    font-size: 12px;
+    text-align: center;
+}
+
+@media (max-width: 480px) {
+    .upload-options {
+        grid-template-columns: 1fr;
+    }
+}
+    </style>
+</head>
+<body>
+
+<header>
+    <div class="nav">
+        <div class="brand">
+            <div class="brand-icon">🌿</div>
+            <span>Flora AI</span>
+        </div>
+        <div class="nav-note">Khám phá thế giới thực vật bằng trí tuệ nhân tạo</div>
+    </div>
+</header>
+
+<main>
+    <section class="hero">
+        <div>
+            <span class="eyebrow">🌱 KHÁM PHÁ THIÊN NHIÊN</span>
+            <h1>Nhận diện thực vật<br>bằng AI</h1>
+            <p>
+                Tải lên một bức ảnh để khám phá tên cây và tìm hiểu
+                đặc điểm hình thái, phân loại cùng kiến thức sinh học.
+            </p>
+        </div>
+        <div class="hero-art">
+            <span class="floating float-one">🔬 Phân tích hình ảnh</span>
+            <span class="leaf">🌿</span>
+            <span class="floating float-two">🌱 Tri thức xanh</span>
+        </div>
+    </section>
+
+    {% if error %}
+        <div class="error">
+            <strong>⚠ Có lỗi xảy ra</strong><br>
+            {{ error }}
+        </div>
+    {% endif %}
+
+    <section class="panel" id="upload-panel">
+        <h2 class="section-title">Bắt đầu nhận diện</h2>
+        <p class="section-desc">
+            Chọn ảnh rõ nét, có thể nhìn thấy lá, hoa hoặc đặc điểm của cây.
+        </p>
+
+        <form method="POST" enctype="multipart/form-data" id="recognition-form">
+            {% csrf_token %}
+
+           
+<div class="upload-area" id="drop-area">
+    <h3>Chọn cách đưa ảnh thực vật vào</h3>
+    <p>Tải ảnh có sẵn hoặc chụp ảnh cây trực tiếp bằng camera.</p>
+
+    <div class="upload-options">
+        <label for="image-input" class="upload-option">
+            <span class="option-icon">📁</span>
+            <strong>Tải ảnh lên</strong>
+            <small>Chọn ảnh trong thiết bị</small>
+        </label>
+
+        <button type="button" class="upload-option" id="open-camera">
+            <span class="option-icon">📷</span>
+            <strong>Chụp bằng camera</strong>
+            <small>Mở camera để chụp cây</small>
+        </button>
+    </div>
+
+    <input
+        type="file"
+        id="image-input"
+        name="image"
+        accept="image/*"
+        required
+    >
+
+    <div id="camera-box" style="display:none; margin-top:20px;">
+        <video
+            id="camera-video"
+            autoplay
+            playsinline
+            style="width:100%; max-width:420px; border-radius:16px; background:#1c2b20;"
+        ></video>
+
+        <div style="margin-top:12px;">
+            <button type="button" class="secondary-btn" id="capture-photo">
+                📸 Chụp ảnh
+            </button>
+            <button type="button" class="secondary-btn" id="close-camera">
+                Đóng camera
+            </button>
+        </div>
+    </div>
+
+    <canvas id="camera-canvas" style="display:none;"></canvas>
+
+    <div id="preview-box">
+        <img id="preview" alt="Ảnh thực vật đã chọn">
+        <div id="file-name"></div>
+        <button type="button" class="secondary-btn" id="retake-photo" style="display:none;">
+            Chụp lại
+        </button>
+    </div>
+```
+    </div>
+
+    <button
+        type="submit"
+        id="submit-btn"
+        class="primary-btn"
+    >
+        🌿 Nhận diện cây
+    </button>
+    </form>
+```
+
+    </section>
+
+    {% if plant %}
+        <section class="panel" id="result-section">
+            <div class="result-heading">
+                <div class="symbol">🌿</div>
+                <div>
+                    <h2>{{ plant.name }}</h2>
+                    <p>Kết quả nhận diện thực vật</p>
+                </div>
+            </div>
+
+            <h3 class="subheading">🔎 Vì sao đây là {{ plant.name }}?</h3>
+            <div class="text-block">
+                {{ plant.identification_clues|linebreaksbr }}
+            </div>
+
+            <h3 class="subheading">📚 Thông tin khoa học</h3>
+            <div class="info-grid">
+                <div class="info-item"><strong>Tên khoa học</strong><span>{{ plant.scientific_name|default:"Chưa có dữ liệu" }}</span></div>
+                <div class="info-item"><strong>Ngành</strong><span>{{ plant.phylum|default:"Chưa có dữ liệu" }}</span></div>
+                <div class="info-item"><strong>Lớp</strong><span>{{ plant.class_name|default:"Chưa có dữ liệu" }}</span></div>
+                <div class="info-item"><strong>Bộ</strong><span>{{ plant.order|default:"Chưa có dữ liệu" }}</span></div>
+                <div class="info-item"><strong>Họ</strong><span>{{ plant.family|default:"Chưa có dữ liệu" }}</span></div>
+                <div class="info-item"><strong>Chi</strong><span>{{ plant.genus|default:"Chưa có dữ liệu" }}</span></div>
+                <div class="info-item"><strong>Loài</strong><span>{{ plant.species|default:"Chưa có dữ liệu" }}</span></div>
+            </div>
+
+            <h3 class="subheading">🌱 Đặc điểm hình thái</h3>
+            <div class="text-block"><strong>Mô tả:</strong><br>{{ plant.description|default:"Chưa có dữ liệu"|linebreaksbr }}</div>
+            <div class="text-block"><strong>Đặc điểm:</strong><br>{{ plant.characteristics|default:"Chưa có dữ liệu"|linebreaksbr }}</div>
+            <div class="info-grid">
+                <div class="info-item"><strong>Thân</strong><span>{{ plant.stem|default:"Chưa có dữ liệu" }}</span></div>
+                <div class="info-item"><strong>Rễ</strong><span>{{ plant.root|default:"Chưa có dữ liệu" }}</span></div>
+                <div class="info-item"><strong>Lá</strong><span>{{ plant.leaf|default:"Chưa có dữ liệu" }}</span></div>
+                <div class="info-item"><strong>Hoa</strong><span>{{ plant.flower|default:"Chưa có dữ liệu" }}</span></div>
+                <div class="info-item"><strong>Quả</strong><span>{{ plant.fruit|default:"Chưa có dữ liệu" }}</span></div>
+                <div class="info-item"><strong>Hạt</strong><span>{{ plant.seed|default:"Chưa có dữ liệu" }}</span></div>
+                <div class="info-item"><strong>Công thức hoa</strong><span>{{ plant.flower_formula|default:"Chưa có dữ liệu" }}</span></div>
+            </div>
+
+            <h3 class="subheading">🌍 Sinh thái</h3>
+            <div class="text-block"><strong>Môi trường sống:</strong><br>{{ plant.habitat|default:"Chưa có dữ liệu"|linebreaksbr }}</div>
+            <div class="text-block"><strong>Phân bố:</strong><br>{{ plant.distribution|default:"Chưa có dữ liệu"|linebreaksbr }}</div>
+            <div class="text-block"><strong>Vai trò sinh thái:</strong><br>{{ plant.ecological_role|default:"Chưa có dữ liệu"|linebreaksbr }}</div>
+
+            {% if comparisons %}
+                <h3 class="subheading">🔬 So sánh với thực vật khác</h3>
+                {% for comparison in comparisons %}
+                    <div class="comparison-card">
+                        <h4>{{ plant.name }} và {{ comparison.compared_plant.name }}</h4>
+                        <p>{{ comparison.description|default:"Chưa có nội dung so sánh."|linebreaksbr }}</p>
+                    </div>
+                {% endfor %}
+            {% endif %}
+
+            <h3 class="subheading">🧠 Kiểm tra kiến thức</h3>
+            {% if quiz_questions %}
+                {% for quiz in quiz_questions %}
+                    <div class="quiz-card">
+                        <strong>{{ forloop.counter }}. {{ quiz.question }}</strong>
+
+                        <label><input type="radio" name="quiz_{{ quiz.id }}" value="A"> A. {{ quiz.option_a }}</label>
+                        <label><input type="radio" name="quiz_{{ quiz.id }}" value="B"> B. {{ quiz.option_b }}</label>
+                        <label><input type="radio" name="quiz_{{ quiz.id }}" value="C"> C. {{ quiz.option_c }}</label>
+                        <label><input type="radio" name="quiz_{{ quiz.id }}" value="D"> D. {{ quiz.option_d }}</label>
+
+                        <button
+                            type="button"
+                            class="secondary-btn"
+                            onclick="checkAnswer(
+                                '{{ quiz.id }}',
+                                '{{ quiz.correct_answer|escapejs }}',
+                                '{{ quiz.explanation|escapejs }}'
+                            )"
+                        >Kiểm tra đáp án</button>
+
+                        <p class="quiz-result" id="result_{{ quiz.id }}"></p>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p>Chưa có câu hỏi kiểm tra cho loài cây này.</p>
+            {% endif %}
+        </section>
+    {% endif %}
+</main>
+
+<footer>
+    Flora AI · Khám phá và học tập về thế giới thực vật 🌿
+</footer>
+
+<script>
+
+const imageInput = document.getElementById("image-input");
+const previewBox = document.getElementById("preview-box");
+const preview = document.getElementById("preview");
+const fileName = document.getElementById("file-name");
+const form = document.getElementById("recognition-form");
+const submitButton = document.getElementById("submit-btn");
+
+const cameraBox = document.getElementById("camera-box");
+const video = document.getElementById("camera-video");
+const canvas = document.getElementById("camera-canvas");
+const openCameraButton = document.getElementById("open-camera");
+const captureButton = document.getElementById("capture-photo");
+const closeCameraButton = document.getElementById("close-camera");
+const retakeButton = document.getElementById("retake-photo");
+
+let cameraStream = null;
+let capturedFile = null;
+
+function showPreview(file) {
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+        alert("Vui lòng chọn một tệp hình ảnh.");
+        imageInput.value = "";
+        return;
+    }
+
+    capturedFile = null;
+    retakeButton.style.display = "none";
+
+    const reader = new FileReader();
+    reader.onload = function (event) {
+        preview.src = event.target.result;
+        previewBox.style.display = "block";
+        fileName.textContent = file.name;
+    };
+    reader.readAsDataURL(file);
+}
+
+imageInput.addEventListener("change", function () {
+    capturedFile = null;
+    showPreview(this.files[0]);
+});
+
+openCameraButton.addEventListener("click", async function () {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        alert("Trình duyệt không hỗ trợ camera. Hãy thử Chrome hoặc Edge.");
+        return;
+    }
+
+    try {
+        stopCamera();
+
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: { ideal: "environment" } },
+            audio: false
+        });
+
+        video.srcObject = cameraStream;
+        cameraBox.style.display = "block";
+        previewBox.style.display = "none";
+        imageInput.value = "";
+        capturedFile = null;
+    } catch (error) {
+        alert("Không thể mở camera. Hãy cấp quyền camera cho trình duyệt rồi thử lại.");
+    }
+});
+
+captureButton.addEventListener("click", function () {
+    if (!video.videoWidth || !video.videoHeight) {
+        alert("Camera chưa sẵn sàng. Vui lòng đợi một chút.");
+        return;
+    }
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    const context = canvas.getContext("2d");
+    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    canvas.toBlob(function (blob) {
+        if (!blob) {
+            alert("Không thể chụp ảnh. Vui lòng thử lại.");
+            return;
+        }
+
+        capturedFile = new File(
+            [blob],
+            "anh-cay-camera.jpg",
+            { type: "image/jpeg" }
+        );
+
+        imageInput.value = "";
+        preview.src = URL.createObjectURL(blob);
+        previewBox.style.display = "block";
+        fileName.textContent = "Ảnh vừa chụp";
+        retakeButton.style.display = "inline-block";
+
+        stopCamera();
+        cameraBox.style.display = "none";
+    }, "image/jpeg", 0.92);
+});
+
+closeCameraButton.addEventListener("click", function () {
+    stopCamera();
+    cameraBox.style.display = "none";
+});
+
+retakeButton.addEventListener("click", async function () {
+    previewBox.style.display = "none";
+    await openCameraButton.click();
+});
+
+function stopCamera() {
+    if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+        cameraStream = null;
+    }
+    video.srcObject = null;
+}
+
+form.addEventListener("submit", function (event) {
+    if (!imageInput.files.length && !capturedFile) {
+        event.preventDefault();
+        alert("Vui lòng tải ảnh lên hoặc chụp ảnh bằng camera trước nhé.");
+        return;
+    }
+
+    if (capturedFile) {
+        event.preventDefault();
+
+        const formData = new FormData(form);
+        formData.set("image", capturedFile, capturedFile.name);
+
+        submitButton.disabled = true;
+        submitButton.textContent = "Đang nhận diện, vui lòng chờ...";
+
+        fetch(form.action || window.location.href, {
+            method: "POST",
+            body: formData
+        })
+        .then(response => response.text())
+        .then(html => {
+            document.open();
+            document.write(html);
+            document.close();
+        })
+        .catch(() => {
+            alert("Có lỗi khi gửi ảnh. Vui lòng thử lại.");
+            submitButton.disabled = false;
+            submitButton.textContent = "🌿 Nhận diện cây";
+        });
+    } else {
+        submitButton.disabled = true;
+        submitButton.textContent = "Đang nhận diện, vui lòng chờ...";
+    }
+});
+
+function checkAnswer(quizId, correctAnswer, explanation) {
+    const selected = document.querySelector(
+        'input[name="quiz_' + quizId + '"]:checked'
+    );
+    const result = document.getElementById("result_" + quizId);
+
+    if (!selected) {
+        result.textContent = "⚠ Vui lòng chọn một đáp án.";
+        return;
+    }
+
+    if (selected.value === correctAnswer) {
+        result.textContent = "✅ Chính xác! " + explanation;
+    } else {
+        result.textContent = "❌ Chưa chính xác. Hãy thử lại nhé!";
+    }
+}
+
+window.addEventListener("beforeunload", stopCamera);
+
+{% if plant %}
+document.getElementById("result-section")?.scrollIntoView({
+    behavior: "smooth",
+    block: "start"
+});
+{% endif %}
+    </script>
+
+</body>
+</html>

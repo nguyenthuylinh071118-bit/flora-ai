@@ -1,5 +1,9 @@
+
 import logging
 from django.shortcuts import render
+
+logger = logging.getLogger(__name__)
+
 from django.utils import timezone
 from django.db import transaction
 from django.db.models import F
